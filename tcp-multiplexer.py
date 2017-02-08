@@ -1,19 +1,25 @@
 #!/usr/bin/env python
 # coding: utf-8
+import warnings
+warnings.filterwarnings("ignore")
 import re
 import sys
 import socket
 import threading
+import json
+import pandas
 
-BUFFER_SIZE = 4096
-LOCAL_ADDR = "0.0.0.0"
-LOCAL_PORT = 9000
-VERBOSE = 3
+config = json.load(open("server.ini"))
+BUFFER_SIZE = config.get("BUFFER_SIZE", 4096)
+LOCAL_ADDR = config.get("LOCAL_ADDR", "0.0.0.0")
+LOCAL_PORT = config.get("LOCAL_PORT", 9000)
+VERBOSE = config.get("VERBOSE", 3)
 
-PROTOCOL_RULES = {
-	"HTTP": (re.compile("www.infosec-wiki.com", re.MULTILINE), "localhost", 80),
-	"SOCKS5": (re.compile("^\x05", re.MULTILINE), "localhost", 1080),
-}
+PROTOCOL_RULES = {}
+df = pandas.read_csv("rules.csv")
+for row in df.values:
+	name, pattern, remote_addr, remote_port = row
+	PROTOCOL_RULES[name] = (re.compile(pattern, re.MULTILINE), remote_addr, remote_port)
 
 log_lock = threading.Lock()
 def log(msg, level=1):
